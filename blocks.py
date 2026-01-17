@@ -83,15 +83,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return _get_slot_value(bi.shadow_slot)
 
             return ("", None) # completely empty
-        
-        
-        def get_block_in_input(input_name) -> dict | None:
-            if input_name not in inputs: return None
 
-            bi = BlockInput.from_list(inputs[input_name])
-            if isinstance(bi.block_slot, str):
-                return target['blocks'].get(bi.block_slot, None)
-            return None
 
         def next_block(include_semicolon=True):
             """Helper that assumes the current block ends with semicolon and new line, and next block is at `next` and at the same indent"""
@@ -420,7 +412,15 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}if {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
 
             case 'control_if_else':
-                # TODO elif
+                # Adapted from method input_with_stack to handle elif:
+                if 'SUBSTACK2' in inputs:
+                    bi = BlockInput.from_list(inputs['SUBSTACK2'])
+                    if isinstance(bi.block_slot, str):
+                        _opcode = target['blocks'][bi.block_slot]['opcode']
+                        if _opcode == 'control_if' or _opcode == 'control_if_else':
+                            _substack = block_search(bi.block_slot, indent_level).strip()
+                            return f"{indent}if {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}} el{_substack}" + next_block(False)
+
                 return f"{indent}if {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}} else {{\n{input_with_stack('SUBSTACK2')}\n{indent}}}" + next_block(False)
 
             case 'control_stop':
