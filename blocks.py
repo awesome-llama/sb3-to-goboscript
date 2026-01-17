@@ -661,13 +661,13 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 
                 # debug blocks
                 if proccode == "\u200B\u200Blog\u200B\u200B %s":
-                    return f"{indent}# log{args}" + next_block()
+                    return f"{indent}log{args}" + next_block()
                 if proccode == "\u200B\u200Bwarn\u200B\u200B %s":
-                    return f"{indent}# warn{args}" + next_block()
+                    return f"{indent}warn{args}" + next_block()
                 if proccode == "\u200B\u200Berror\u200B\u200B %s":
-                    return f"{indent}# error{args}" + next_block()
+                    return f"{indent}error{args}" + next_block()
                 if proccode == "\u200B\u200Bbreakpoint\u200B\u200B":
-                    return f"{indent}# breakpoint{args}" + next_block()
+                    return f"{indent}breakpoint{args}" + next_block()
                 
                 return f"{indent}{valid_name(proccode, 'custom')}{args}" + next_block()
 
