@@ -8,7 +8,6 @@ import blocks
 import utilities as utils
 import assets
 import tw_config
-import postprocess
 
 
 def replace_slashes(path:str):
@@ -131,7 +130,6 @@ def convert_project(project_path, output_directory=None):
             f.write('\n'.join([str(l) for l in goboscript_code])) # save flattened data
 
 
-    postprocess.create_postprocess_file(project_data, shared_project_data, output_dir)
     tw_config.create_config_file(project_data, output_dir)
     
     print(f'Saved project to {output_dir}')
