@@ -111,39 +111,49 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             return string_output
 
 
-        def input(input_name) -> str:
+        def strip_brackets_conditional(text: str, enable=True) -> str:
+            if enable and text.startswith('(') and text.endswith(')'):
+                text = text[1:-1]
+            return text
+
+        
+        def input(input_name, strip_brackets=True) -> str:
             """Helper that assumes the input is a key in the input dict"""
             if input_name not in inputs: return ""
+            
+            return strip_brackets_conditional(parse_input(inputs[input_name])[0], strip_brackets)
 
-            return parse_input(inputs[input_name])[0]
 
-
-        def input_num(input_name) -> str:
+        def input_num(input_name, strip_brackets=True) -> str:
             """Helper that assumes the input is a key in the input dict with a possible numeric value"""
             if input_name not in inputs: return ""
 
             text, input_type = parse_input(inputs[input_name])
             if input_type == 'number':
                 # try to convert string into number by removing the quotes
-                stripped = text.strip("\"")
+
                 try:
-                    _ = float(stripped)
-                    return stripped # is a valid number
+                    if text.startswith('"') and text.endswith('"'):
+                        stripped: str = text[1:-1]
+                        if stripped.startswith("."): stripped = "0" + stripped # goboscript doesn't allow numbers to start with dot
+                        _ = float(stripped)
+                        return stripped # is a valid number
                 except:
-                    return text # don't strip quotes, not a valid number
+                    pass
+                return text # don't strip quotes, not a valid number
 
-            return text
+            return strip_brackets_conditional(text, strip_brackets)
 
 
-        def input_with_reporter(input_name) -> str:
-            """Helper that assumes the input is solely a reporter block (such as the boolean condition of an if block)"""
+        def input_with_bool(input_name) -> str:
+            """Helper that assumes the input is solely a boolean reporter block (such as the boolean condition of an if block)"""
             if input_name not in inputs: return "false"
 
             bi = BlockInput.from_list(inputs[input_name])
             if isinstance(bi.block_slot, str):
                 return block_search(bi.block_slot, indent_level+1)
             
-            return ""
+            return "false"
         
         def input_with_stack(input_name) -> str:
             """Helper that assumes the input is solely a stack block (such as nested in a C shaped block)"""
@@ -288,9 +298,9 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             
             case 'event_whengreaterthan':
                 if fields['WHENGREATERTHANMENU'][0] == 'LOUDNESS': 
-                    return f"onloudness {input_num('VALUE')} {{\n{block_search(next, indent_level+1)}\n}}"
+                    return f"onloudness {input_num('VALUE', False)} {{\n{block_search(next, indent_level+1)}\n}}"
                 elif fields['WHENGREATERTHANMENU'][0] == 'TIMER':
-                    return f"ontimer {input_num('VALUE')} {{\n{block_search(next, indent_level+1)}\n}}"
+                    return f"ontimer {input_num('VALUE', False)} {{\n{block_search(next, indent_level+1)}\n}}"
                 else:
                     return "# FAILED {opcode}"
             
@@ -384,17 +394,17 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # CONTROL
 
             case 'control_repeat':
-                return f"{indent}repeat {input_num('TIMES')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
+                return f"{indent}repeat {input_num('TIMES', False)} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
 
             case 'control_repeat_until':
-                return f"{indent}until {input_with_reporter('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
+                return f"{indent}until {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
 
             case 'control_while':
-                return f"{indent}until not {input_with_reporter('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
+                return f"{indent}until not {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
 
             case 'control_for_each':
                 _var_name = valid_name(fields['VARIABLE'][0], 'var')
-                return f"{indent}{_var_name} = 1;\n{indent}repeat {input_num('VALUE')} {{\n{input_with_stack('SUBSTACK')}\n{indent}    {_var_name}++;\n{indent}}}" + next_block(False)
+                return f"{indent}{_var_name} = 1;\n{indent}repeat {input_num('VALUE', False)} {{\n{input_with_stack('SUBSTACK')}\n{indent}    {_var_name}++;\n{indent}}}" + next_block(False)
 
             case 'control_forever':
                 return f"{indent}forever {{\n{input_with_stack('SUBSTACK')}\n{indent}}}"
@@ -403,16 +413,16 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}wait {input_num('DURATION')}" + next_block()
 
             case 'control_wait_until':
-                return f"{indent}wait_until {input_with_reporter('CONDITION')}" + next_block()
+                #return f"{indent}wait_until {input_with_bool('CONDITION')}" + next_block() # TODO, goboscript won't compile this
+                return f"{indent}until {input_with_bool('CONDITION')} {{}} # wait_until" + next_block(False)
 
             case 'control_if':
-                # TODO convert to %if when input is blank
-                return f"{indent}if {input_with_reporter('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
-            
+                return f"{indent}if {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
+
             case 'control_if_else':
                 # TODO elif
-                return f"{indent}if {input_with_reporter('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}} else {{\n{input_with_stack('SUBSTACK2')}\n{indent}}}" + next_block(False)
-            
+                return f"{indent}if {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}} else {{\n{input_with_stack('SUBSTACK2')}\n{indent}}}" + next_block(False)
+
             case 'control_stop':
                 _stop_option = fields['STOP_OPTION'][0]
                 if _stop_option == 'this script':
@@ -509,7 +519,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}reset_timer" + next_block()
 
             case 'sensing_of':
-                return f"({input('OBJECT')}.{field('PROPERTY')})"
+                return f"({input('OBJECT', False)}.{field('PROPERTY')})"
 
             case 'sensing_of_object_menu':
                 return field('OBJECT')
@@ -529,49 +539,52 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # OPERATORS
 
             case 'operator_add':
-                return f"({input_num('NUM1')}+{input_num('NUM2')})"
+                return f"({input_num('NUM1', False)}+{input_num('NUM2', False)})"
 
             case 'operator_subtract':
-                return f"({input_num('NUM1')}-{input_num('NUM2')})"
+                _arg2 = input_num('NUM2', False)
+                if _arg2.startswith("-"): _arg2 = f"({_arg2})" # wrap with brackets
+                
+                return f"({input_num('NUM1', False)}-{_arg2})"
 
             case 'operator_multiply':
-                return f"({input_num('NUM1')}*{input_num('NUM2')})"
+                return f"({input_num('NUM1', False)}*{input_num('NUM2', False)})"
 
             case 'operator_divide':
-                return f"({input_num('NUM1')}/{input_num('NUM2')})"
+                return f"({input_num('NUM1', False)}/{input_num('NUM2', False)})"
             
 
             case 'operator_mod':
-                return f"({input_num('NUM1')}%{input_num('NUM2')})"
+                return f"({input_num('NUM1', False)}%{input_num('NUM2', False)})"
 
             case 'operator_round':
                 return f"round({input_num('NUM')})"
 
 
             case 'operator_lt':
-                return f"({input('OPERAND1')} < {input('OPERAND2')})"
+                return f"({input('OPERAND1', False)} < {input('OPERAND2', False)})"
 
             case 'operator_gt':
-                return f"({input('OPERAND1')} > {input('OPERAND2')})"
+                return f"({input('OPERAND1', False)} > {input('OPERAND2', False)})"
 
             case 'operator_equals':
-                return f"({input('OPERAND1')} == {input('OPERAND2')})"
+                return f"({input('OPERAND1', False)} == {input('OPERAND2', False)})"
             
             case 'operator_and':
-                return f"({input_with_reporter('OPERAND1')} and {input_with_reporter('OPERAND2')})"
+                return f"({input_with_bool('OPERAND1')} and {input_with_bool('OPERAND2')})"
             
             case 'operator_or':
-                return f"({input_with_reporter('OPERAND1')} or {input_with_reporter('OPERAND2')})"
+                return f"({input_with_bool('OPERAND1')} or {input_with_bool('OPERAND2')})"
 
             case 'operator_not':
-                return f"(not {input_with_reporter('OPERAND')})"
+                return f"(not {input_with_bool('OPERAND')})"
 
 
             case 'operator_join':
-                return f"({input('STRING1')} & {input('STRING2')})"
+                return f"({input('STRING1', False)} & {input('STRING2', False)})"
             
             case 'operator_letter_of':
-                return f"{input('STRING')}[{input_num('LETTER')}]"
+                return f"{input('STRING', False)}[{input_num('LETTER')}]"
             
             case 'operator_length':
                 return f"length({input('STRING')})"
@@ -608,7 +621,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}add {input('ITEM')} to {valid_name(fields['LIST'][0], 'list')}" + next_block()
 
             case 'data_deleteoflist':
-                return f"{indent}delete {valid_name(fields['LIST'][0], 'list')}[{input('INDEX')}]" + next_block()
+                return f"{indent}delete {valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
 
             case 'data_deletealloflist':
                 return f"{indent}delete {valid_name(fields['LIST'][0], 'list')}" + next_block()
@@ -665,7 +678,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 if proccode == "// %s":
                     # remove quotes
                     args = args.strip()
-                    if args[0] == '"' and args[-1] == '"': args = args[1:-1]
+                    if args.startswith('"') and args.endswith('"'): args = args[1:-1]
                     return f"{indent}# {args}" + next_block(False)
                 
                 # debug blocks
@@ -686,11 +699,11 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             case 'argument_reporter_boolean':
                 # mod blocks
                 if fields['VALUE'][0] == "is compiled?":
-                    return "tw_is_compiled()"
+                    return "$tw_is_compiled"
                 if fields['VALUE'][0] == "is TurboWarp?":
-                    return "tw_is_turbowarp()"
+                    return "$tw_is_turbowarp"
                 if fields['VALUE'][0] == "is forkphorus?":
-                    return "tw_is_forkphorus()"
+                    return "$tw_is_forkphorus"
                 
                 return f"${valid_name(fields['VALUE'][0], 'arg')}"
 

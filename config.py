@@ -1,4 +1,3 @@
-
 import os
 import json
 
@@ -17,6 +16,17 @@ def find_comment_json(sprite):
                 return None
     return None
 
+
+
+def get_layers(project_data):
+    sprites = []
+    for target in project_data['targets']:
+        if not target['isStage']:
+            sprites.append((target['name'], target.get('layerOrder', 1000)))
+
+    sprites.sort(key=lambda e: e[1])
+
+    return [e[0] for e in sprites]
 
 
 
@@ -52,6 +62,10 @@ def create_config_file(project_data, output_directory):
             if 'width' in config: file += f"stage_width = {str(config['width']).lower()}\n"
             
             if 'height' in config: file += f"stage_height = {str(config['height']).lower()}\n"
+
+            file += "bitmap_resolution = 2\n"
+
+            file += f"layers = {json.dumps(get_layers(project_data))}"
 
             with open(os.path.join(output_directory, 'goboscript.toml'), 'w', encoding='utf-8') as f:
                 f.write(file)

@@ -7,7 +7,7 @@ import os
 import blocks
 import utilities as utils
 import assets
-import tw_config
+import config
 
 
 def replace_slashes(path:str):
@@ -95,7 +95,7 @@ def convert_project(project_path, output_directory=None):
 
         # List declaration (happens in all sprites)
         for var in target['lists'].values():
-            goboscript_code.append(f"list {np.get_valid_name(var[0], target['name'])} = {json.dumps(var[1])};")
+            goboscript_code.append(f"list {np.get_valid_name(var[0], target=target['name'])} = {json.dumps(var[1])};")
         
         if len(target['lists']) > 0: goboscript_code.append('') # extra spacing
 
@@ -105,7 +105,7 @@ def convert_project(project_path, output_directory=None):
             project_globals = []
             for var in target['variables'].values():
                 if isinstance(var[1], str): var[1] = f'"{var[1]}"'
-                project_globals.append(f"var {np.get_valid_name(var[0], target['name'])} = {var[1]};")
+                project_globals.append(f"var {np.get_valid_name(var[0], target=target['name'])} = {var[1]};")
             goboscript_code.append('\n'.join(project_globals))
 
             if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
@@ -119,7 +119,7 @@ def convert_project(project_path, output_directory=None):
             if not block['topLevel']: continue # this block is not first in any script, skip
 
             # get block and search recursively
-            goboscript_code.append(f'# script {block_id} ({block.get('x',0)},{block.get('y',0)})')
+            #goboscript_code.append(f'# script {block_id} ({block.get('x',0)},{block.get('y',0)})')
             goboscript_code.append(blocks.recursive_block_search(target, block_id, shared_project_data))
             goboscript_code.append('') # spacing for next
 
@@ -130,16 +130,16 @@ def convert_project(project_path, output_directory=None):
             f.write('\n'.join([str(l) for l in goboscript_code])) # save flattened data
 
 
-    tw_config.create_config_file(project_data, output_dir)
+    config.create_config_file(project_data, output_dir)
     
     print(f'Saved project to {output_dir}')
 
 
 if __name__ == '__main__':
     convert_project('samples/fbd.sb3', 'output')
-    #convert_project('samples/ARE Full Engine (INCOMPLETE).sb3', 'output')
-    #convert_project('samples/proc_sandbox2.sb3', 'output')
-    #convert_project('samples/UI block based 4.sb3', 'output')
-    #convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
-    #convert_project('samples/TextImage RGB8 Decoder Only.sb3', 'output')
+    convert_project('samples/ARE Full Engine (INCOMPLETE).sb3', 'output')
+    convert_project('samples/proc_sandbox2.sb3', 'output')
+    convert_project('samples/UI block based 4.sb3', 'output')
+    convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
+    convert_project('samples/TextImage RGB8 Decoder Only.sb3', 'output')
 
