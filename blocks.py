@@ -655,17 +655,22 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # CUSTOM BLOCKS
 
             case 'procedures_definition':
-                temp = f"proc {input('custom_block')} {{\n{block_search(next, indent_level+1)}\n}}"
-                if temp.startswith("proc ____s comment {"): return "# proc ____s comment {}"
-                return temp
+                _code = f"proc {input('custom_block')} {{\n{block_search(next, indent_level+1)}\n}}"
+                if _code.startswith("proc ____s comment {"): return "# proc ____s comment {}"
+                return _code
 
             case 'procedures_prototype':
                 # note that the proccode is sufficient for identifying a custom block, the argument names do not matter 
                 
                 _arg_names = json.loads(block['mutation']['argumentnames'])
                 _validated_arg_names = [valid_name(a, 'arg') for a in _arg_names]
-                
-                return f"{valid_name(block['mutation']['proccode'], 'custom')} {', '.join(_validated_arg_names)}"
+
+                if len(_validated_arg_names) > 0:
+                    _validated_arg_names = ' ' + ', '.join(_validated_arg_names)
+                else:
+                    _validated_arg_names = ''
+
+                return f"{valid_name(block['mutation']['proccode'], 'custom')}{_validated_arg_names}"
 
             case 'procedures_call':
                 args = ''
