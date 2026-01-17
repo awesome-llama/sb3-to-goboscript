@@ -609,7 +609,10 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}{valid_name(fields['VARIABLE'][0], 'var')} = {input('VALUE')}" + next_block()
 
             case 'data_changevariableby':
-                return f"{indent}{valid_name(fields['VARIABLE'][0], 'var')} += {input_num('VALUE')}" + next_block()
+                _name = valid_name(fields['VARIABLE'][0], 'var')
+                _val = input_num('VALUE')
+                if _val == "1": return f"{indent}{_name}++" + next_block() # increment
+                return f"{indent}{_name} += {_val}" + next_block()
 
             case 'data_showvariable':
                 return f"{indent}show {valid_name(fields['VARIABLE'][0], 'var')}" + next_block()
