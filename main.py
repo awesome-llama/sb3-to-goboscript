@@ -15,12 +15,15 @@ def replace_slashes(path:str):
     return path.replace('\\', '/')
 
 
+
+
+
+
 def convert_project(project_path, output_directory=None):
     """Create a goboscript project. Copies assets and blocks into a valid file structure for goboscript. Output folder is in the same path as the source sb3 file."""
 
     project_archive = zipfile.ZipFile(project_path, 'r')
     project_data = json.loads(project_archive.read('project.json'))
-
     print(f'Loaded project {project_path}')
 
     
@@ -52,21 +55,15 @@ def convert_project(project_path, output_directory=None):
             continue
         target['name'] = utils.valid_file_name(target['name'])
 
+
+
     remapped_costume_names = assets.get_remapped_costume_names(project_data)
-    
-    # copy now that the paths are known
-    for md5ext, path in remapped_costume_names.items():
-        path = os.path.join(output_dir, path)
-        os.makedirs(os.path.split(path)[0], exist_ok=True)
-        
-        if not os.path.exists(path):
-            project_archive.extract(md5ext, os.path.split(path)[0])
-            os.rename(os.path.join(os.path.split(path)[0], md5ext), path)
+    assets.copy_assets_to_folder(project_archive, output_dir, remapped_costume_names)
 
+    remapped_sound_names = assets.get_remapped_sound_names(project_data)
+    assets.copy_assets_to_folder(project_archive, output_dir, remapped_sound_names)
 
-    
-    
-    # first convert the scripts
+    # Scripts
     for i, target in enumerate(project_data['targets']):
         goboscript_code = []
         goboscript_code.append('# Converted from sb3 file\n')
@@ -88,19 +85,22 @@ def convert_project(project_path, output_directory=None):
             goboscript_code.append('on "reset globals" {\n' + '\n'.join(project_globals) + '\n}\n\n')
 
 
-        # find the costumes to use 
+        # find the costumes to use
+        # TODO prevent names being potential file paths
         costumes = []
         for costume in target['costumes']:
             md5ext = remapped_costume_names[costume['md5ext']]
-            costume_name = str(costume['name'])
-            
-            # note there is an edge case with costume names being valid file paths
-            #if costume_name == os.path.splitext(md5ext)[0]: # extensionless names must match (with no subfolders)
-            #    costumes.append(f'"{replace_slashes(os.path.split(md5ext)[1])}"')
-            #else:
-            costumes.append(f'"{replace_slashes(md5ext)}" as {json.dumps(costume_name)}')
-            
+            costumes.append(f'"{replace_slashes(md5ext)}" as {json.dumps(str(costume['name']))}')
+        
         goboscript_code.append('costumes ' + ', '.join(costumes) + ';\n')
+
+        sounds = []
+        for asset in target['sounds']:
+            md5ext = remapped_sound_names[asset['md5ext']]
+            sounds.append(f'"{replace_slashes(md5ext)}" as {json.dumps(str(asset['name']))}')
+        
+        goboscript_code.append('sounds ' + ', '.join(sounds) + ';\n')
+
 
         # enumerate over blocks of a target, if applicable replace with their translation
         for block_id, block in target['blocks'].items():
@@ -133,6 +133,6 @@ if __name__ == '__main__':
     #convert_project('samples/tm3d.sb3', 'output')
     #convert_project('samples/proc_sandbox2.sb3', 'output')
     #convert_project('samples/UI block based 4.sb3', 'output')
-    #convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
-    convert_project('samples/TextImage RGB8 Decoder Only.sb3', 'output')
+    convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
+    #convert_project('samples/TextImage RGB8 Decoder Only.sb3', 'output')
 

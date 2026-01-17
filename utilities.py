@@ -1,7 +1,5 @@
 
 import re
-# import random
-#import pandas as pd
 import math
 
 ALLOWED_NAME_PATTERN = re.compile('[_a-zA-Z0-9]')
@@ -31,7 +29,7 @@ def hash_stringified(value):
     CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     value = hash(value)
     result = ''
-    for i in range(5):
+    for _ in range(5):
         result = CHARS[value % 62] + result
         value = math.floor(value / 62)
 
@@ -39,19 +37,16 @@ def hash_stringified(value):
 
 
 class NamePool():
-
+    """A database of names to prevent duplicates as goboscript has a more restrictive character set."""
+    
     def __init__(self):
-        #self.df = pd.DataFrame(columns=['scratch_name', 'usage', 'target', 'goboscript_name'])
         self.pool = {} # key is name as found in scratch + target, value is (new name, usage)
         self.used_names = set() # keeps track of used valid names. tuples include sprite because scratch and goboscript allows names to be unique across sprites
         self.goboscript_names = [] # register of every goboscript_name, only to be read from.
-        #self.mappings = {}
 
-    # TODO
-    
     # each entry needs source name (key), usage, target (key), mapped name (key)
 
-    def get_valid_name(self, scratch_name, usage, target='stage'):
+    def get_valid_name(self, scratch_name: str, usage='var', target='stage'):
         if target is None: target = 'stage'
 
         if target != 'stage': # search sprite first for local name
@@ -83,17 +78,14 @@ class NamePool():
         self.used_names.add((proposed_name, target))
         self.pool[(scratch_name, usage, target)] = proposed_name
         return proposed_name
-        
-        
-    #def to_dict(self):
-    #    return self.pool
+
 
 
 
 def valid_file_name(name: str):
+    """Convert a name into a valid file name"""
 
     # Define invalid characters for filenames across all platforms
-
     replacement = '_'
     sanitised = re.sub(r'[<>:"/\\|?*]', replacement, name) # replace invalid characters
 
