@@ -684,6 +684,14 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"${valid_name(fields['VALUE'][0], 'arg')}"
         
             case 'argument_reporter_boolean':
+                # mod blocks
+                if fields['VALUE'][0] == "is compiled?":
+                    return "tw_is_compiled()"
+                if fields['VALUE'][0] == "is TurboWarp?":
+                    return "tw_is_turbowarp()"
+                if fields['VALUE'][0] == "is forkphorus?":
+                    return "tw_is_forkphorus()"
+                
                 return f"${valid_name(fields['VALUE'][0], 'arg')}"
 
 
