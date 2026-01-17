@@ -69,6 +69,11 @@ def convert_project(project_path, output_directory=None):
         goboscript_code.append('# Converted from sb3 file\n')
 
 
+        # Hide sprite
+        if (not target.get('visible', True)) and not target['isStage']:
+            goboscript_code.append('hide;\n')
+
+
         # TODO prevent names being potential file paths
 
         # Costume declaration
