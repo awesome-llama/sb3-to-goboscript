@@ -48,40 +48,44 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
         next = block['next']
         
         
-        def parse_input(input_value) -> str:
-            """Helper to handle block inputs"""
+        def parse_input(input_value) -> tuple:
+            """Helper to handle block inputs. Returns a string with the general type of input it was."""
             
-            def _get_slot_value(slot_contents: list):
+            def _get_slot_value(slot_contents: list) -> tuple:
                 """Get a readable value from a slot."""
                 
-                if 3 < slot_contents[0] <= 10:
-                    return json.dumps(slot_contents[1])
+                if 3 < slot_contents[0] <= 8:
+                    return (json.dumps(slot_contents[1]), 'number')
+                if slot_contents[0] == 9:
+                    return (json.dumps(slot_contents[1]), 'color')
+                if slot_contents[0] == 10:
+                    return (json.dumps(slot_contents[1]), 'text')
                 if slot_contents[0] == 11: # broadcasts are [11, name, id]
-                    return json.dumps(slot_contents[1]) # slot_contents[2]
+                    return (json.dumps(slot_contents[1]), 'broadcast_name') # slot_contents[2]
                 if slot_contents[0] == 12: 
-                    return valid_name(slot_contents[1], 'var')
+                    return (valid_name(slot_contents[1], 'var'), 'var_name')
                 if slot_contents[0] == 13:
-                    return valid_name(slot_contents[1], 'list')
+                    return (valid_name(slot_contents[1], 'list'), 'list_name')
                 raise Exception(f'unknown enum {slot_contents[0]}')
 
             bi = BlockInput.from_list(input_value)
 
             if isinstance(bi.block_slot, str):
-                return block_search(bi.block_slot, indent_level=0) # is block
+                return (block_search(bi.block_slot, indent_level=0), 'block') # is block
             
             if bi.block_slot is not None:
                 return _get_slot_value(bi.block_slot)
 
             if isinstance(bi.shadow_slot, str):
-                return block_search(bi.shadow_slot, indent_level=0) # is shadow block
+                return (block_search(bi.shadow_slot, indent_level=0), 'block') # is shadow block
             
             if bi.shadow_slot is not None:
                 return _get_slot_value(bi.shadow_slot)
 
-            return "" # completely empty
+            return ("", None) # completely empty
         
         
-        def get_block_in_input(input_name) -> dict:
+        def get_block_in_input(input_name) -> dict | None:
             if input_name not in inputs: return None
 
             bi = BlockInput.from_list(inputs[input_name])
@@ -106,21 +110,32 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             string_output += '\n' + next_block_data
             return string_output
 
-        def input(input_name):
+
+        def input(input_name) -> str:
             """Helper that assumes the input is a key in the input dict"""
             if input_name not in inputs: return ""
 
-            return parse_input(inputs[input_name])
-        
-        # TODO: use this to convert numbers
-        def input_num(input_name):
+            return parse_input(inputs[input_name])[0]
+
+
+        def input_num(input_name) -> str:
             """Helper that assumes the input is a key in the input dict with a possible numeric value"""
             if input_name not in inputs: return ""
 
-            return parse_input(inputs[input_name])
+            text, input_type = parse_input(inputs[input_name])
+            if input_type == 'number':
+                # try to convert string into number by removing the quotes
+                stripped = text.strip("\"")
+                try:
+                    _ = float(stripped)
+                    return stripped # is a valid number
+                except:
+                    return text # don't strip quotes, not a valid number
+
+            return text
 
 
-        def input_with_reporter(input_name):
+        def input_with_reporter(input_name) -> str:
             """Helper that assumes the input is solely a reporter block (such as the boolean condition of an if block)"""
             if input_name not in inputs: return "false"
 
@@ -130,7 +145,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             
             return ""
         
-        def input_with_stack(input_name):
+        def input_with_stack(input_name) -> str:
             """Helper that assumes the input is solely a stack block (such as nested in a C shaped block)"""
             if input_name not in inputs: return ""
 
@@ -161,13 +176,13 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}say {input('MESSAGE')}" + next_block()
             
             case 'looks_sayforsecs':
-                return f"{indent}say {input('MESSAGE')}, {input('SECS')}" + next_block()
+                return f"{indent}say {input('MESSAGE')}, {input_num('SECS')}" + next_block()
 
             case 'looks_think':
                 return f"{indent}think {input('MESSAGE')}" + next_block()
             
             case 'looks_thinkforsecs':
-                return f"{indent}think {input('MESSAGE')}, {input('SECS')}" + next_block()
+                return f"{indent}think {input('MESSAGE')}, {input_num('SECS')}" + next_block()
 
             case 'looks_show':
                 return f"{indent}show" + next_block()
@@ -200,19 +215,19 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}set_{fields['EFFECT'][0].lower()}_effect {input('VALUE')}" + next_block()
 
             case 'looks_seteffectto':
-                return f"{indent}change_{fields['EFFECT'][0].lower()}_effect {input('CHANGE')}" + next_block()
+                return f"{indent}change_{fields['EFFECT'][0].lower()}_effect {input_num('CHANGE')}" + next_block()
             
             case 'looks_setsizeto':
                 return f"{indent}set_size {input('SIZE')}" + next_block()
 
             case 'looks_changesizeby':
-                return f"{indent}change_size {input('CHANGE')}" + next_block()
+                return f"{indent}change_size {input_num('CHANGE')}" + next_block()
 
             case 'looks_gotofrontback':
                 return f"{indent}goto_{fields['FRONT_BACK'][0].lower()}" + next_block()
             
             case 'looks_goforwardbackwardlayers':
-                return f"{indent}go_{fields['FORWARD_BACKWARD'][0].lower()} {input('NUM')}" + next_block()
+                return f"{indent}go_{fields['FORWARD_BACKWARD'][0].lower()} {input_num('NUM')}" + next_block()
 
             case 'looks_costumenumbername':
                 return f"costume_{fields['NUMBER_NAME'][0].lower()}()"
@@ -239,19 +254,19 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}stop_all_sounds" + next_block()
             
             case 'sound_changeeffectby':
-                return f"{indent}change_{fields['EFFECT'][0].lower()}_effect {input('VALUE')}" + next_block()
+                return f"{indent}change_{fields['EFFECT'][0].lower()}_effect {input_num('VALUE')}" + next_block()
 
             case 'sound_seteffectto':
-                return f"{indent}set_{fields['EFFECT'][0].lower()}_effect {input('VALUE')}" + next_block()
+                return f"{indent}set_{fields['EFFECT'][0].lower()}_effect {input_num('VALUE')}" + next_block()
 
             case 'sound_cleareffects':
                 return f"{indent}clear_sound_effects" + next_block()
 
             case 'sound_changevolumeby':
-                return f"{indent}change_volume {input('VOLUME')}" + next_block()
+                return f"{indent}change_volume {input_num('VOLUME')}" + next_block()
 
             case 'sound_setvolumeto':
-                return f"{indent}set_volume {input('VOLUME')}" + next_block()
+                return f"{indent}set_volume {input_num('VOLUME')}" + next_block()
 
             case 'sound_volume':
                 return "volume()"
@@ -273,9 +288,9 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             
             case 'event_whengreaterthan':
                 if fields['WHENGREATERTHANMENU'][0] == 'LOUDNESS': 
-                    return f"onloudness {input('VALUE')} {{\n{block_search(next, indent_level+1)}\n}}"
+                    return f"onloudness {input_num('VALUE')} {{\n{block_search(next, indent_level+1)}\n}}"
                 elif fields['WHENGREATERTHANMENU'][0] == 'TIMER':
-                    return f"ontimer {input('VALUE')} {{\n{block_search(next, indent_level+1)}\n}}"
+                    return f"ontimer {input_num('VALUE')} {{\n{block_search(next, indent_level+1)}\n}}"
                 else:
                     return "# FAILED {opcode}"
             
@@ -293,10 +308,10 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # MOTION
 
             case 'motion_movesteps':
-                return f"{indent}move {input('STEPS')}" + next_block()
+                return f"{indent}move {input_num('STEPS')}" + next_block()
 
             case 'motion_gotoxy':
-                return f"{indent}goto {input('X')}, {input('Y')}" + next_block()
+                return f"{indent}goto {input_num('X')}, {input_num('Y')}" + next_block()
             
             case 'motion_goto':
                 _target = input('TO')
@@ -308,13 +323,13 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return field('TO')
 
             case 'motion_turnright':
-                return f"{indent}turn_right {input('DEGREES')}" + next_block()
+                return f"{indent}turn_right {input_num('DEGREES')}" + next_block()
 
             case 'motion_turnleft':
-                return f"{indent}turn_left {input('DEGREES')}" + next_block()
+                return f"{indent}turn_left {input_num('DEGREES')}" + next_block()
 
             case 'motion_pointindirection':
-                return f"{indent}point_in_direction {input('DIRECTION')}" + next_block()
+                return f"{indent}point_in_direction {input_num('DIRECTION')}" + next_block()
 
             case 'motion_pointtowards':
                 _target = input('TOWARDS')
@@ -326,13 +341,13 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return field('TOWARDS')
             
             case 'motion_glidesecstoxy':
-                return f"{indent}glide {input('X')}, {input('Y')}, {input('SECS')}" + next_block()
+                return f"{indent}glide {input_num('X')}, {input_num('Y')}, {input_num('SECS')}" + next_block()
 
             case 'motion_glideto':
                 _target = input('TO')
-                if _target == '"_mouse_"': return f"{indent}glide_to_mouse_pointer({input('SECS')})" + next_block()
-                if _target == '"_random_"': return f"{indent}glide_to_random_position({input('SECS')})" + next_block()
-                return f"{indent}glide {_target}, {input('SECS')}" + next_block()
+                if _target == '"_mouse_"': return f"{indent}glide_to_mouse_pointer({input_num('SECS')})" + next_block()
+                if _target == '"_random_"': return f"{indent}glide_to_random_position({input_num('SECS')})" + next_block()
+                return f"{indent}glide {_target}, {input_num('SECS')}" + next_block()
                 
             case 'motion_glideto_menu':
                 return field('TO')
@@ -345,16 +360,16 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"set_rotation_style_{_style}"
 
             case 'motion_changexby':
-                return f"{indent}change_x {input('DX')}" + next_block()
+                return f"{indent}change_x {input_num('DX')}" + next_block()
 
             case 'motion_setx':
-                return f"{indent}set_x {input('X')}" + next_block()
+                return f"{indent}set_x {input_num('X')}" + next_block()
             
             case 'motion_changeyby':
-                return f"{indent}change_y {input('DY')}" + next_block()
+                return f"{indent}change_y {input_num('DY')}" + next_block()
 
             case 'motion_sety':
-                return f"{indent}set_y {input('Y')}" + next_block()
+                return f"{indent}set_y {input_num('Y')}" + next_block()
 
             case 'motion_xposition':
                 return "x_position()"
@@ -369,7 +384,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # CONTROL
 
             case 'control_repeat':
-                return f"{indent}repeat {input('TIMES')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
+                return f"{indent}repeat {input_num('TIMES')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
 
             case 'control_repeat_until':
                 return f"{indent}until {input_with_reporter('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
@@ -379,13 +394,13 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
 
             case 'control_for_each':
                 _var_name = valid_name(fields['VARIABLE'][0], 'var')
-                return f"{indent}{_var_name} = 1;\n{indent}repeat {input('VALUE')} {{\n{input_with_stack('SUBSTACK')}\n{indent}    {_var_name}++;\n{indent}}}" + next_block(False)
+                return f"{indent}{_var_name} = 1;\n{indent}repeat {input_num('VALUE')} {{\n{input_with_stack('SUBSTACK')}\n{indent}    {_var_name}++;\n{indent}}}" + next_block(False)
 
             case 'control_forever':
                 return f"{indent}forever {{\n{input_with_stack('SUBSTACK')}\n{indent}}}"
 
             case 'control_wait':
-                return f"{indent}wait {input('DURATION')}" + next_block()
+                return f"{indent}wait {input_num('DURATION')}" + next_block()
 
             case 'control_wait_until':
                 return f"{indent}wait_until {input_with_reporter('CONDITION')}" + next_block()
@@ -514,23 +529,23 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # OPERATORS
 
             case 'operator_add':
-                return f"({input('NUM1')}+{input('NUM2')})"
+                return f"({input_num('NUM1')}+{input_num('NUM2')})"
 
             case 'operator_subtract':
-                return f"({input('NUM1')}-{input('NUM2')})"
+                return f"({input_num('NUM1')}-{input_num('NUM2')})"
 
             case 'operator_multiply':
-                return f"({input('NUM1')}*{input('NUM2')})"
+                return f"({input_num('NUM1')}*{input_num('NUM2')})"
 
             case 'operator_divide':
-                return f"({input('NUM1')}/{input('NUM2')})"
+                return f"({input_num('NUM1')}/{input_num('NUM2')})"
             
 
             case 'operator_mod':
-                return f"({input('NUM1')}%{input('NUM2')})"
+                return f"({input_num('NUM1')}%{input_num('NUM2')})"
 
             case 'operator_round':
-                return f"round({input('NUM')})"
+                return f"round({input_num('NUM')})"
 
 
             case 'operator_lt':
@@ -556,7 +571,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"({input('STRING1')} & {input('STRING2')})"
             
             case 'operator_letter_of':
-                return f"{input('STRING')}[{input('LETTER')}]"
+                return f"{input('STRING')}[{input_num('LETTER')}]"
             
             case 'operator_length':
                 return f"length({input('STRING')})"
@@ -567,9 +582,11 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             
             case 'operator_mathop':
                 _op = fields['OPERATOR'][0]
-                return f"{MATH_OPS[_op]}({input('NUM')})"
+                return f"{MATH_OPS[_op]}({input_num('NUM')})"
 
             case 'operator_random':
+                # pick random might need strings for floating point number picking
+                # future improvement would be to check if that's needed
                 return f"random({input('FROM')}, {input('TO')})"
 
 
@@ -579,7 +596,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}{valid_name(fields['VARIABLE'][0], 'var')} = {input('VALUE')}" + next_block()
 
             case 'data_changevariableby':
-                return f"{indent}{valid_name(fields['VARIABLE'][0], 'var')} += {input('VALUE')}" + next_block()
+                return f"{indent}{valid_name(fields['VARIABLE'][0], 'var')} += {input_num('VALUE')}" + next_block()
 
             case 'data_showvariable':
                 return f"{indent}show {valid_name(fields['VARIABLE'][0], 'var')}" + next_block()
@@ -597,13 +614,13 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}delete {valid_name(fields['LIST'][0], 'list')}" + next_block()
 
             case 'data_insertatlist':
-                return f"{indent}insert {input('ITEM')} {valid_name(fields['LIST'][0], 'list')}[{input('INDEX')}]" + next_block()
+                return f"{indent}insert {input('ITEM')} {valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
 
             case 'data_replaceitemoflist':
-                return f"{indent}{valid_name(fields['LIST'][0], 'list')}[{input('INDEX')}] = {input('ITEM')}" + next_block()
+                return f"{indent}{valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}] = {input('ITEM')}" + next_block()
 
             case 'data_itemoflist':
-                return f"{valid_name(fields['LIST'][0], 'list')}[{input('INDEX')}]"
+                return f"{valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]"
 
             case 'data_itemnumoflist': # (item # of [item] in list)
                 return f"({input('ITEM')} in {valid_name(fields['LIST'][0], 'list')})" 
@@ -644,7 +661,6 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 
                 # debug blocks
                 if proccode == "\u200B\u200Blog\u200B\u200B %s":
-                    print('debug log not implemented')
                     return f"{indent}# log{args}" + next_block()
                 if proccode == "\u200B\u200Bwarn\u200B\u200B %s":
                     return f"{indent}# warn{args}" + next_block()
@@ -685,7 +701,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                     print('pen_changePenColorParamBy does not support block insertion in goboscript')
                     return "# pen_changePenColorParamBy"
                 
-                return f"{indent}change_pen_{_cp} {input('VALUE')}" + next_block()
+                return f"{indent}change_pen_{_cp} {input_num('VALUE')}" + next_block()
             
             case 'pen_setPenColorParamTo':
                 _cp = input('COLOR_PARAM').strip('"')
@@ -693,7 +709,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                     print('pen_setPenColorParamTo does not support block insertion in goboscript')
                     return "# pen_setPenColorParamTo"
                 
-                return f"{indent}set_pen_{_cp} {input('VALUE')}" + next_block()
+                return f"{indent}set_pen_{_cp} {input_num('VALUE')}" + next_block()
 
             case "pen_menu_colorParam":
                 _cp = field('colorParam')
@@ -702,18 +718,18 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return _cp
 
             case 'pen_changePenSizeBy':
-                return f"{indent}change_pen_size {input('SIZE')}" + next_block()
+                return f"{indent}change_pen_size {input_num('SIZE')}" + next_block()
 
             case 'pen_setPenSizeTo':
-                return f"{indent}set_pen_size {input('SIZE')}" + next_block()
+                return f"{indent}set_pen_size {input_num('SIZE')}" + next_block()
 
             case 'pen_setPenShadeToNumber':
                 not_implemented()
-                return f"{indent}set_pen_shade {input('SHADE')}" + next_block()
+                return f"{indent}set_pen_shade {input_num('SHADE')}" + next_block()
             
             case 'pen_changePenShadeBy':
                 not_implemented()
-                return f"{indent}change_pen_shade {input('SHADE')}" + next_block()
+                return f"{indent}change_pen_shade {input_num('SHADE')}" + next_block()
 
 
             # MISC
