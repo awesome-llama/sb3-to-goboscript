@@ -68,41 +68,46 @@ def convert_project(project_path, output_directory=None):
         goboscript_code = []
         goboscript_code.append('# Converted from sb3 file\n')
 
-        # list declaration (happens in all sprites)
-        for var in target['lists'].values():
-            goboscript_code.append(f"list {np.get_valid_name(var[0], target['name'])} = {json.dumps(var[1])};")
-        if len(target['lists']) > 0:
-            goboscript_code.append('')
-        
-        # global var declaration
-        if target['isStage']:
-            
-            project_globals = []
-            for var in target['variables'].values():
-                if isinstance(var[1], str): var[1] = f'"{var[1]}"'
-                project_globals.append(f"    {np.get_valid_name(var[0], target['name'])} = {var[1]};")
-            
-            goboscript_code.append('on "reset globals" {\n' + '\n'.join(project_globals) + '\n}\n\n')
 
-
-        # find the costumes to use
         # TODO prevent names being potential file paths
+
+        # Costume declaration
         costumes = []
         for costume in target['costumes']:
             md5ext = remapped_costume_names[costume['md5ext']]
             costumes.append(f'"{replace_slashes(md5ext)}" as {json.dumps(str(costume['name']))}')
         
-        goboscript_code.append('costumes ' + ', '.join(costumes) + ';\n')
+        if len(costumes) > 0: goboscript_code.append('costumes ' + ', '.join(costumes) + ';\n')
 
+
+        # Sound declaration
         sounds = []
         for asset in target['sounds']:
             md5ext = remapped_sound_names[asset['md5ext']]
             sounds.append(f'"{replace_slashes(md5ext)}" as {json.dumps(str(asset['name']))}')
         
-        goboscript_code.append('sounds ' + ', '.join(sounds) + ';\n')
+        if len(sounds) > 0: goboscript_code.append('sounds ' + ', '.join(sounds) + ';\n')
 
 
-        # enumerate over blocks of a target, if applicable replace with their translation
+        # List declaration (happens in all sprites)
+        for var in target['lists'].values():
+            goboscript_code.append(f"list {np.get_valid_name(var[0], target['name'])} = {json.dumps(var[1])};")
+        
+        if len(target['lists']) > 0: goboscript_code.append('') # extra spacing
+
+
+        # Global var declaration (in stage)
+        if target['isStage']:
+            project_globals = []
+            for var in target['variables'].values():
+                if isinstance(var[1], str): var[1] = f'"{var[1]}"'
+                project_globals.append(f"var {np.get_valid_name(var[0], target['name'])} = {var[1]};")
+            goboscript_code.append('\n'.join(project_globals))
+
+            if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
+
+
+        # Enumerate over blocks of a target, if applicable replace with their translation
         for block_id, block in target['blocks'].items():
             
             if isinstance(block, list): continue # variable or list reporter, not used by goboscript
@@ -115,7 +120,7 @@ def convert_project(project_path, output_directory=None):
             goboscript_code.append('') # spacing for next
 
 
-        # save goboscript file
+        # Save goboscript file
         goboscript_file_name = os.path.join(output_dir, target['name'] +".gs")
         with open(goboscript_file_name, 'w', encoding='utf-8') as f:
             f.write('\n'.join([str(l) for l in goboscript_code])) # save flattened data
@@ -128,11 +133,10 @@ def convert_project(project_path, output_directory=None):
 
 
 if __name__ == '__main__':
-    #convert_project('samples/fbd.sb3', 'output')
+    convert_project('samples/fbd.sb3', 'output')
     #convert_project('samples/ARE Full Engine (INCOMPLETE).sb3', 'output')
-    #convert_project('samples/tm3d.sb3', 'output')
     #convert_project('samples/proc_sandbox2.sb3', 'output')
     #convert_project('samples/UI block based 4.sb3', 'output')
-    convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
+    #convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
     #convert_project('samples/TextImage RGB8 Decoder Only.sb3', 'output')
 
