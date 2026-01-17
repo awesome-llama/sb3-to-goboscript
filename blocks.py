@@ -642,7 +642,9 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # CUSTOM BLOCKS
 
             case 'procedures_definition':
-                return f"proc {input('custom_block')} {{\n{block_search(next, indent_level+1)}\n}}"
+                temp = f"proc {input('custom_block')} {{\n{block_search(next, indent_level+1)}\n}}"
+                if temp.startswith("proc ____s comment {"): return "# proc ____s comment {}"
+                return temp
 
             case 'procedures_prototype':
                 # note that the proccode is sufficient for identifying a custom block, the argument names do not matter 
@@ -658,6 +660,13 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                     args = f" {', '.join([input(k) for k in block['inputs'].keys()])}"
                 
                 proccode = block['mutation']['proccode']
+
+                # comments
+                if proccode == "// %s":
+                    # remove quotes
+                    args = args.strip()
+                    if args[0] == '"' and args[-1] == '"': args = args[1:-1]
+                    return f"{indent}# {args}" + next_block(False)
                 
                 # debug blocks
                 if proccode == "\u200B\u200Blog\u200B\u200B %s":
