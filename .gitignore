@@ -1,0 +1,13 @@
+.vscode/*
+!.vscode/launch.json
+
+__pycache__
+
+# For development
+temp/
+test/
+samples/
+output/
+test*.py
+dump.json
+dump.sb3
