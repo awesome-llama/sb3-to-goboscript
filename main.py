@@ -1,5 +1,3 @@
-# test
-
 import zipfile
 import json
 import os
@@ -12,10 +10,6 @@ import config
 
 def replace_slashes(path:str):
     return path.replace('\\', '/')
-
-
-
-
 
 
 def convert_project(project_path, output_directory=None):
@@ -136,10 +130,12 @@ def convert_project(project_path, output_directory=None):
 
 
 if __name__ == '__main__':
-    convert_project('samples/fbd.sb3', 'output')
-    convert_project('samples/ARE Full Engine (INCOMPLETE).sb3', 'output')
-    convert_project('samples/proc_sandbox2.sb3', 'output')
-    convert_project('samples/UI block based 4.sb3', 'output')
-    convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
-    convert_project('samples/TextImage RGB8 Decoder Only.sb3', 'output')
+    # test files
+    #convert_project('samples/fbd.sb3', 'output')
+    #convert_project('samples/ARE Full Engine (INCOMPLETE).sb3', 'output')
+    #convert_project('samples/proc_sandbox2.sb3', 'output')
+    #convert_project('samples/UI block based 4.sb3', 'output')
+    #convert_project('samples/The Mast [3D] 1.4.4.sb3', 'output')
+    #convert_project('samples/TextImage RGB8 Decoder Only.sb3', 'output')
+    pass
 
