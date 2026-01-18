@@ -87,22 +87,19 @@ def convert_project(project_path, output_directory=None):
         if len(sounds) > 0: goboscript_code.append('sounds ' + ', '.join(sounds) + ';\n')
 
 
-        # List declaration (happens in all sprites)
+        # List declaration
         for var in target['lists'].values():
             goboscript_code.append(f"list {np.get_valid_name(var[0], target=target['name'])} = {json.dumps(var[1])};")
         
         if len(target['lists']) > 0: goboscript_code.append('') # extra spacing
 
 
-        # Global var declaration (in stage)
-        if target['isStage']:
-            project_globals = []
-            for var in target['variables'].values():
-                if isinstance(var[1], str): var[1] = f'"{var[1]}"'
-                project_globals.append(f"var {np.get_valid_name(var[0], target=target['name'])} = {var[1]};")
-            goboscript_code.append('\n'.join(project_globals))
+        # Var declaration
+        for var in target['variables'].values():
+            if isinstance(var[1], str): var[1] = f'"{var[1]}"'
+            goboscript_code.append(f"var {np.get_valid_name(var[0], target=target['name'])} = {var[1]};")
 
-            if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
+        if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
 
 
         # Enumerate over blocks of a target, if applicable replace with their translation
