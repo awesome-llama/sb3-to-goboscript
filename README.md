@@ -17,7 +17,9 @@ Projects are formatted targeting my own style as seen in [Procedural Sandbox](ht
 
 ## Usage
 
-Run the `convert_project` function in `main.py` with arguments for input and output paths.
+Run the `convert_project` function in `convert_project.py` with arguments for input and output paths.
+
+A CLI is provided in `cli.py`, run it like this: `python [cli_path] [-o output] [input]`.
 
 
 ## Contributing
