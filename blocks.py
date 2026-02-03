@@ -241,6 +241,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return "size()"
 
 
+
             # SOUNDS
 
             case 'sound_playuntildone':
@@ -272,6 +273,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
 
             case 'sound_volume':
                 return "volume()"
+
 
 
             # EVENTS
@@ -306,7 +308,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}broadcast_and_wait {input('BROADCAST_INPUT')}" + next_block()
 
 
-            
+
             # MOTION
 
             case 'motion_movesteps':
@@ -383,6 +385,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return "direction()"
 
 
+
             # CONTROL
 
             case 'control_repeat':
@@ -457,6 +460,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             case 'control_all_at_once':
                 return f"{indent}# control_all_at_once:\n{input_with_stack('SUBSTACK')}" + next_block(False)
             
+
 
             # SENSING
 
@@ -535,6 +539,10 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             case 'sensing_username':
                 return "username()"
 
+            case 'sensing_online':
+                return "online()"
+
+
 
             # OPERATORS
 
@@ -603,6 +611,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"random({input('FROM')}, {input('TO')})"
 
 
+
             # DATA
 
             case 'data_setvariableto':
@@ -653,6 +662,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
 
             case 'data_hidelist':
                 return f"{indent}hide {valid_name(fields['LIST'][0], 'list')}" + next_block()
+
 
 
             # CUSTOM BLOCKS
@@ -716,6 +726,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"${valid_name(fields['VALUE'][0], 'arg')}"
 
 
+
             # PEN
 
             case 'pen_clear':
@@ -768,6 +779,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             case 'pen_changePenShadeBy':
                 not_implemented()
                 return f"{indent}change_pen_shade {input_num('SHADE')}" + next_block()
+
 
 
             # MISC
