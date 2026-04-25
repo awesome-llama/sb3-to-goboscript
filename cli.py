@@ -4,7 +4,7 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser(
     prog='sb3_to_goboscript',
-    description="Convert a Scratch project into goboscript. If no output path is given, the project is created in the same path as the input."
+    description="Convert a Scratch project into goboscript. If no output path is given, a folder containing the project is created in the same path as the input."
 )
 
 parser.add_argument("input", type=Path, help="sb3 file")

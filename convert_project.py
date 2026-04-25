@@ -13,7 +13,10 @@ def replace_slashes(path:str):
 
 
 def convert_project(project_path, output_directory=None):
-    """Create a goboscript project. Copies assets and blocks into a valid file structure for goboscript. Output folder is in the same path as the source sb3 file."""
+    """Create a goboscript project. Copies assets and blocks into a valid file structure for goboscript. 
+    Output is placed in a folder in the same path as the source sb3 file unless otherwise specified."""
+
+    if not os.path.isfile(project_path): raise Exception(f'Input not a file path: "{project_path}"')
 
     project_archive = zipfile.ZipFile(project_path, 'r')
     project_data = json.loads(project_archive.read('project.json'))
@@ -27,6 +30,7 @@ def convert_project(project_path, output_directory=None):
     if output_directory is None:
         output_dir = os.path.join(base_dir, project_name)
     else:
+        if not os.path.isdir(output_directory): raise Exception(f'Output not a directory: "{output_directory}"')
         output_dir = os.path.join(output_directory, project_name)
     
     os.makedirs(output_dir, exist_ok=True)
