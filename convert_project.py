@@ -101,6 +101,7 @@ def convert_project(project_path, output_directory=None):
         # Var declaration
         for var in target['variables'].values():
             if isinstance(var[1], str): var[1] = f'"{var[1]}"'
+            elif isinstance(var[1], bool): var[1] = ("true" if var[1] else "false")
             goboscript_code.append(f"var {np.get_valid_name(var[0], target=target['name'])} = {var[1]};")
 
         if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
