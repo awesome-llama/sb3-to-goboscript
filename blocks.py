@@ -639,7 +639,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}delete {valid_name(fields['LIST'][0], 'list')}" + next_block()
 
             case 'data_insertatlist':
-                return f"{indent}insert {input('ITEM')} {valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
+                return f"{indent}insert {input('ITEM')} at {valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
 
             case 'data_replaceitemoflist':
                 return f"{indent}{valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}] = {input('ITEM')}" + next_block()
