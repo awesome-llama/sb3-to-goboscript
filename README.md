@@ -12,6 +12,7 @@ Projects are formatted targeting my own style as seen in [Procedural Sandbox](ht
 - Numbers stored as strings in project.json are converted to numbers if known it will not change behaviour.
 - List and variable names are not differentiated currently. This may introduce code bugs.
 - Custom block names are currently not nicely formatted to prevent name collisions. For now it is suggested to use a code editor's find-and-replace function.
+- The number of arguments in a custom block definition and its call is not guaranteed to be equal in Scratch. Some may be hidden. This tool does not check for this and assumes each block's own data is correct.
 - List data is not placed in separate files currently. Long lists may clutter the code.
 
 
