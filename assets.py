@@ -46,13 +46,17 @@ def get_remapped_sound_names(project_data):
 
 
 def copy_assets_to_folder(project_archive: zipfile.ZipFile, output_dir, names: dict):
-    for md5ext, path in names.items():
-        path = os.path.join(output_dir, path)
+    for md5ext, local_path in names.items():
+        path = os.path.join(output_dir, local_path)
         os.makedirs(os.path.split(path)[0], exist_ok=True)
         
         if not os.path.exists(path):
-            project_archive.extract(md5ext, os.path.split(path)[0])
-            os.rename(os.path.join(os.path.split(path)[0], md5ext), path)
+            try:
+                project_archive.extract(md5ext, os.path.split(path)[0])
+                os.rename(os.path.join(os.path.split(path)[0], md5ext), path)
+            except:
+                print(f"Could not find {md5ext} (to be written to {local_path})")
+
 
 
 
