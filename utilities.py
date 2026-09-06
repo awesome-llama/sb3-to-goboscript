@@ -25,59 +25,77 @@ def validate_name(name: str):
 
 
 def hash_stringified(value):
-    CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' # 62^6 = 56800235584
     value = hash(value)
     result = ''
-    for _ in range(5):
+    for _ in range(6):
         result = CHARS[value % 62] + result
         value = math.floor(value / 62)
 
     return result
 
 
-class NamePool():
-    """A database of names to prevent duplicates as goboscript has a more restrictive character set."""
-    
+class VariableNamePool():
+    """A database of variable/list names to prevent duplicates as goboscript has a more restrictive character set."""
+
     def __init__(self):
-        self.pool = {} # key is name as found in scratch + target, value is (new name, usage)
-        self.used_names = set() # keeps track of used valid names. tuples include sprite because scratch and goboscript allows names to be unique across sprites
-        self.goboscript_names = [] # register of every goboscript_name, only to be read from.
+        self.mappings: dict[tuple, str] = {} # fast lookup using tuple
+        self.targets: dict[str, set[str]] = {} # each target is a set containing names and their mapped valid name
 
-    # each entry needs source name (key), usage, target (key), mapped name (key)
 
-    def get_valid_name(self, scratch_name: str, usage='var', target='stage'):
+    def get_valid_name(self, name: str, usage: str, target: str) -> str:
+        """Map the inputted name to a valid non-conflicting name. Register the mapping and return the new name."""
+
         if target is None: target = 'stage'
 
-        if target != 'stage': # search sprite first for local name
-            _found = self.pool.get((scratch_name, usage, target), None)
-            if _found is not None: return _found
-        
-        _found = self.pool.get((scratch_name, usage, 'stage'), None)
-        if _found is not None: return _found
-        
-        # no exact matching name was found, register a new one and return it
-        # to register, first find a validated name that is not in use in the current sprite.
-        # first check if the validated name unmodified has been used.
+        mappings_key = (name, usage, target)
 
-        proposed_name = validate_name(scratch_name)
+        # use mappings first
+        if mappings_key in self.mappings:
+            return self.mappings[mappings_key]
+
         if target != 'stage':
-            if (proposed_name, target) not in self.used_names and (proposed_name, 'stage') not in self.used_names:
-                self.used_names.add((proposed_name, target))
-                self.pool[(scratch_name, usage, target)] = proposed_name
+            if (name, usage, 'stage') in self.mappings:
+                return self.mappings[(name, usage, 'stage')]
+
+
+        if target not in self.targets:
+            self.targets[target] = set()
+
+        # find a new name
+        proposed_name = validate_name(name) # validation happens after lookup
+
+        if target == 'stage':
+            # attempt to create a new entry with no modification
+            name_found = False
+            for tgt in self.targets.values():
+                if proposed_name in tgt:
+                    name_found = True
+                    break
+
+            if not name_found:
+                self.targets[target].add(proposed_name)
+                self.mappings[mappings_key] = proposed_name
                 return proposed_name
-        
-        if (proposed_name, 'stage') not in self.used_names:
-            self.used_names.add((proposed_name, 'stage'))
-            self.pool[(scratch_name, usage, 'stage')] = proposed_name
-            return proposed_name
-        
-        # the proposed name is in use, finally generate a random new one
 
-        proposed_name = validate_name(scratch_name) + '_' + hash_stringified((scratch_name, usage, target))
-        self.used_names.add((proposed_name, target))
-        self.pool[(scratch_name, usage, target)] = proposed_name
-        return proposed_name
+            raise Exception("name already in use locally") # the stage should've been added first
 
+        else:
+            # attempt to create a new entry with no modification
+            if proposed_name not in self.targets[target] and proposed_name not in self.targets['stage']:
+                self.targets[target].add(proposed_name)
+                self.mappings[mappings_key] = proposed_name
+                return proposed_name
+
+            # try again with unique ID
+            proposed_name = validate_name(name) + '_' + hash_stringified(mappings_key)
+
+            if proposed_name not in self.targets[target] and proposed_name not in self.targets['stage']:
+                self.targets[target].add(proposed_name)
+                self.mappings[mappings_key] = proposed_name
+                return proposed_name
+
+            raise Exception("new name already in use") # hash collision
 
 
 
@@ -102,16 +120,21 @@ def valid_file_name(name: str):
 if __name__ == '__main__':
     #print(valid_file_name('.this is a test.! .'))
 
-    np = NamePool()
+    np = VariableNamePool()
 
-    print(np.get_valid_name('this!', 'var', 'stage'))
-    print(np.get_valid_name('this!', 'var', 'a'))
-    print(np.get_valid_name('this!', 'custom', 'stage')) # remap to this_1, already exists in stage
-    print(np.get_valid_name('this!', 'custom', 'a')) # remap to this_1, already exists in a
+    print(np.get_valid_name('variable 1', 'var', 'stage'))
+    print(np.get_valid_name('variable 1', 'var', 'stage'))
+    print(np.get_valid_name('variable 1', 'var', 'sprite1')) # use stage variable
+    print(np.get_valid_name('variable_1', 'var', 'sprite1')) # new variable because stage already took the name
 
-    #print(np.pool, np.used_names)
-    print(np.get_valid_name('this_', 'var', 'a')) # remap to this_2, already exists in a
-    print(np.get_valid_name('this_', 'var', 'a')) # this_2, registered already
-    
-    print(np.get_valid_name('this_', 'var', 'stage')) # remap to this_2, already exists in a
+    print(np.get_valid_name('variable 2', 'var', 'sprite1'))
+    print(np.get_valid_name('variable_2', 'var', 'sprite1')) # new variable because sprite1 already took the name
 
+    print(np.get_valid_name('variable 2', 'list', 'sprite1')) # new list because variable of the same name
+    print(np.get_valid_name('variable 2', 'list', 'sprite2'))
+
+    #print(np.get_valid_name('variable 2', 'var', 'stage')) # not allowed, will break any new local variables
+    #print(np.get_valid_name('variable 2', 'var', 'sprite2')) # broken
+    #print(np.get_valid_name('variable 2', 'list', 'stage')) # not allowed
+
+    #print(np.mappings)

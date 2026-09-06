@@ -27,11 +27,16 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
     if target['blocks'][current_block_id] is not None and target['blocks'][current_block_id]['opcode'] not in HATS:
         is_commented_out = True
 
-    np = shared_project_data['name_pool']
+    vnp: utilities.VariableNamePool = shared_project_data['var_name_pool']
 
-    def valid_name(name, usage):
+    def valid_var_name(name, usage):
+        return vnp.get_valid_name(name, usage, target['name'])
+
+    def valid_proc_name(name):
         return utilities.validate_name(name)
-        #return np.get_valid_name(name, target['name'], usage)
+
+    def valid_arg_name(name):
+        return utilities.validate_name(name)
 
     def block_search(current_block_id: str, indent_level=0) -> str:
         if current_block_id is None or current_block_id == "": 
@@ -62,10 +67,10 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                     return (json.dumps(slot_contents[1]), 'text')
                 if slot_contents[0] == 11: # broadcasts are [11, name, id]
                     return (json.dumps(slot_contents[1]), 'broadcast_name') # slot_contents[2]
-                if slot_contents[0] == 12: 
-                    return (valid_name(slot_contents[1], 'var'), 'var_name')
+                if slot_contents[0] == 12:
+                    return (valid_var_name(slot_contents[1], 'var'), 'var_name')
                 if slot_contents[0] == 13:
-                    return (valid_name(slot_contents[1], 'list'), 'list_name')
+                    return (valid_var_name(slot_contents[1], 'list'), 'list_name')
                 raise Exception(f'unknown enum {slot_contents[0]}')
 
             bi = BlockInput.from_list(input_value)
@@ -398,7 +403,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}until not {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
 
             case 'control_for_each':
-                _var_name = valid_name(fields['VARIABLE'][0], 'var')
+                _var_name = valid_var_name(fields['VARIABLE'][0], 'var')
                 return f"{indent}{_var_name} = 1;\n{indent}repeat {input_num('VALUE', False)} {{\n{input_with_stack('SUBSTACK')}\n{indent}    {_var_name}++;\n{indent}}}" + next_block(False)
 
             case 'control_forever':
@@ -408,8 +413,8 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"{indent}wait {input_num('DURATION')}" + next_block()
 
             case 'control_wait_until':
-                #return f"{indent}wait_until {input_with_bool('CONDITION')}" + next_block() # TODO, goboscript won't compile this
-                return f"{indent}until {input_with_bool('CONDITION')} {{}} # wait_until" + next_block(False)
+                # goboscript uses the repeat until loop instead
+                return f"{indent}until {input_with_bool('CONDITION')} {{}}" + next_block(False)
 
             case 'control_if':
                 return f"{indent}if {input_with_bool('CONDITION')} {{\n{input_with_stack('SUBSTACK')}\n{indent}}}" + next_block(False)
@@ -615,53 +620,53 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
             # DATA
 
             case 'data_setvariableto':
-                return f"{indent}{valid_name(fields['VARIABLE'][0], 'var')} = {input('VALUE')}" + next_block()
+                return f"{indent}{valid_var_name(fields['VARIABLE'][0], 'var')} = {input('VALUE')}" + next_block()
 
             case 'data_changevariableby':
-                _name = valid_name(fields['VARIABLE'][0], 'var')
+                _name = valid_var_name(fields['VARIABLE'][0], 'var')
                 _val = input_num('VALUE')
                 if _val == "1": return f"{indent}{_name}++" + next_block() # increment
                 return f"{indent}{_name} += {_val}" + next_block()
 
             case 'data_showvariable':
-                return f"{indent}show {valid_name(fields['VARIABLE'][0], 'var')}" + next_block()
+                return f"{indent}show {valid_var_name(fields['VARIABLE'][0], 'var')}" + next_block()
 
             case 'data_hidevariable':
-                return f"{indent}hide {valid_name(fields['VARIABLE'][0], 'var')}" + next_block()
+                return f"{indent}hide {valid_var_name(fields['VARIABLE'][0], 'var')}" + next_block()
 
             case 'data_addtolist':
-                return f"{indent}add {input('ITEM')} to {valid_name(fields['LIST'][0], 'list')}" + next_block()
+                return f"{indent}add {input('ITEM')} to {valid_var_name(fields['LIST'][0], 'list')}" + next_block()
 
             case 'data_deleteoflist':
-                return f"{indent}delete {valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
+                return f"{indent}delete {valid_var_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
 
             case 'data_deletealloflist':
-                return f"{indent}delete {valid_name(fields['LIST'][0], 'list')}" + next_block()
+                return f"{indent}delete {valid_var_name(fields['LIST'][0], 'list')}" + next_block()
 
             case 'data_insertatlist':
-                return f"{indent}insert {input('ITEM')} at {valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
+                return f"{indent}insert {input('ITEM')} at {valid_var_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]" + next_block()
 
             case 'data_replaceitemoflist':
-                return f"{indent}{valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}] = {input('ITEM')}" + next_block()
+                return f"{indent}{valid_var_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}] = {input('ITEM')}" + next_block()
 
             case 'data_itemoflist':
-                return f"{valid_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]"
+                return f"{valid_var_name(fields['LIST'][0], 'list')}[{input_num('INDEX')}]"
 
             case 'data_itemnumoflist': # (item # of [item] in list)
-                return f"({input('ITEM')} in {valid_name(fields['LIST'][0], 'list')})" 
+                return f"({input('ITEM')} in {valid_var_name(fields['LIST'][0], 'list')})" 
             
             case 'data_lengthoflist':
-                return f"(length {valid_name(fields['LIST'][0], 'list')})"
+                return f"(length {valid_var_name(fields['LIST'][0], 'list')})"
 
             case 'data_listcontainsitem': # <list contains [item]?>
-                return f"contains({valid_name(fields['LIST'][0], 'list')}, {input('ITEM')})"
-                #return f"({input('ITEM')} in {valid_name(fields['LIST'][0])} > 0)" 
+                return f"contains({valid_var_name(fields['LIST'][0], 'list')}, {input('ITEM')})"
+                #return f"({input('ITEM')} in {valid_var_name(fields['LIST'][0], 'list')} > 0)" 
 
             case 'data_showlist':
-                return f"{indent}show {valid_name(fields['LIST'][0], 'list')}" + next_block()
+                return f"{indent}show {valid_var_name(fields['LIST'][0], 'list')}" + next_block()
 
             case 'data_hidelist':
-                return f"{indent}hide {valid_name(fields['LIST'][0], 'list')}" + next_block()
+                return f"{indent}hide {valid_var_name(fields['LIST'][0], 'list')}" + next_block()
 
 
 
@@ -673,17 +678,17 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return _code
 
             case 'procedures_prototype':
-                # note that the proccode is sufficient for identifying a custom block, the argument names do not matter 
+                # note that the proccode is sufficient for identifying a custom block; the argument names do not matter 
                 
                 _arg_names = json.loads(block['mutation']['argumentnames'])
-                _validated_arg_names = [valid_name(a, 'arg') for a in _arg_names]
+                _validated_arg_names = [valid_arg_name(a) for a in _arg_names]
 
                 if len(_validated_arg_names) > 0:
                     _validated_arg_names = ' ' + ', '.join(_validated_arg_names)
                 else:
                     _validated_arg_names = ''
 
-                return f"{valid_name(block['mutation']['proccode'], 'custom')}{_validated_arg_names}"
+                return f"{valid_proc_name(block['mutation']['proccode'])}{_validated_arg_names}"
 
             case 'procedures_call':
                 args = ''
@@ -709,21 +714,21 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 if proccode == "\u200B\u200Bbreakpoint\u200B\u200B":
                     return f"{indent}breakpoint{args}" + next_block()
                 
-                return f"{indent}{valid_name(proccode, 'custom')}{args}" + next_block()
+                return f"{indent}{valid_proc_name(proccode)}{args}" + next_block()
 
             case 'argument_reporter_string_number':
-                return f"${valid_name(fields['VALUE'][0], 'arg')}"
+                return f"${valid_arg_name(fields['VALUE'][0])}"
         
             case 'argument_reporter_boolean':
                 # mod blocks
-                if fields['VALUE'][0] == "is compiled?":
+                if fields['VALUE'][0].lower() == "is compiled?":
                     return "$tw_is_compiled"
-                if fields['VALUE'][0] == "is TurboWarp?":
+                if fields['VALUE'][0].lower() == "is turbowarp?":
                     return "$tw_is_turbowarp"
-                if fields['VALUE'][0] == "is forkphorus?":
+                if fields['VALUE'][0].lower() == "is forkphorus?":
                     return "$tw_is_forkphorus"
                 
-                return f"${valid_name(fields['VALUE'][0], 'arg')}"
+                return f"${valid_arg_name(fields['VALUE'][0])}"
 
 
 
@@ -800,5 +805,3 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
 
 if __name__ == '__main__':
     pass
-    
-    #print(valid_name('1test hello'))

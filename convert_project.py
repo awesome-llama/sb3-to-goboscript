@@ -38,11 +38,11 @@ def convert_project(project_path, output_directory=None):
     
     #######
     
-    np = utils.NamePool()
+    vnp = utils.VariableNamePool()
 
     # add global vars and lists to name pool
 
-    shared_project_data = {'name_pool':np}
+    shared_project_data = {'var_name_pool':vnp}
 
     # validate sprite names
     for target in project_data['targets']:
@@ -62,6 +62,10 @@ def convert_project(project_path, output_directory=None):
 
     # Scripts
     for i, target in enumerate(project_data['targets']):
+        if i == 0 and not target['isStage']:
+            raise Exception("stage must be processed first due to global variables")
+
+
         goboscript_code = []
         goboscript_code.append('# Converted from sb3 file\n')
 
@@ -93,16 +97,14 @@ def convert_project(project_path, output_directory=None):
 
         # List declaration
         for var in target['lists'].values():
-            goboscript_code.append(f"list {np.get_valid_name(var[0], target=target['name'])} = {json.dumps(var[1])};")
+            goboscript_code.append(f"list {vnp.get_valid_name(var[0], 'list', target['name'])} = {json.dumps(var[1])};")
         
         if len(target['lists']) > 0: goboscript_code.append('') # extra spacing
 
 
         # Var declaration
         for var in target['variables'].values():
-            if isinstance(var[1], str): var[1] = f'"{var[1]}"'
-            elif isinstance(var[1], bool): var[1] = ("true" if var[1] else "false")
-            goboscript_code.append(f"var {np.get_valid_name(var[0], target=target['name'])} = {var[1]};")
+            goboscript_code.append(f"var {vnp.get_valid_name(var[0], 'var', target['name'])} = {json.dumps(var[1])};")
 
         if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
 
