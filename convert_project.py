@@ -53,12 +53,13 @@ def convert_project(project_path, output_directory=None):
         target['name'] = utils.valid_file_name(target['name'])
 
 
-
     remapped_costume_names = assets.get_remapped_costume_names(project_data)
-    assets.copy_assets_to_folder(project_archive, output_dir, remapped_costume_names)
+    rotation_centers = assets.get_rotation_centers(project_data)
+    assets.copy_assets_to_folder(project_archive, output_dir, remapped_costume_names, rotation_centers)
 
     remapped_sound_names = assets.get_remapped_sound_names(project_data)
-    assets.copy_assets_to_folder(project_archive, output_dir, remapped_sound_names)
+    assets.copy_assets_to_folder(project_archive, output_dir, remapped_sound_names, {})
+
 
     # Scripts
     for i, target in enumerate(project_data['targets']):
@@ -97,14 +98,18 @@ def convert_project(project_path, output_directory=None):
 
         # List declaration
         for var in target['lists'].values():
-            goboscript_code.append(f"list {vnp.get_valid_name(var[0], 'list', target['name'])} = {json.dumps(var[1])};")
+            new_name = vnp.get_valid_name(var[0], 'list', target['name'])
+            goboscript_code.append(f"list {new_name} = {json.dumps(var[1])};")
         
         if len(target['lists']) > 0: goboscript_code.append('') # extra spacing
 
 
         # Var declaration
+        # note: it is possible for there to be multiple identically named variables in a sprite.
+        #if target['isStage']:
         for var in target['variables'].values():
-            goboscript_code.append(f"var {vnp.get_valid_name(var[0], 'var', target['name'])} = {json.dumps(var[1])};")
+            new_name = vnp.get_valid_name(var[0], 'var', target['name'])
+            goboscript_code.append(f"var {new_name} = {json.dumps(var[1])};")
 
         if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
 
