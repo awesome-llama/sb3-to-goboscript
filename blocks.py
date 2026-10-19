@@ -452,19 +452,20 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
 
             case 'control_start_as_clone':
                 return f"onclone {{\n{block_search(next, indent_level+1)}\n}}"
-            
+
             case 'control_get_counter':
-                return "control_counter"
+                return "control_counter" # variable name instead of dedicated reporter
 
             case 'control_incr_counter':
-                return "control_counter++" + next_block()
-               
+                return f"{indent}control_counter++" + next_block()
+
             case 'control_clear_counter':
-                return "control_counter = 0" + next_block()
-            
+                return f"{indent}control_counter = 0" + next_block()
+
             case 'control_all_at_once':
+                not_implemented()
                 return f"{indent}# control_all_at_once:\n{input_with_stack('SUBSTACK')}" + next_block(False)
-            
+
 
 
             # SENSING
@@ -819,6 +820,30 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
 
             case 'music_getTempo':
                 return "tempo()"
+
+
+
+            # TURBOWARP EXTENSION: LMS COMMENTS
+
+            case 'lmscomments_commentHat':
+                # add comment to top and don't indent
+                not_implemented() # the current implementation can't comment out nested blocks
+                return f"# {input('COMMENT').strip('"')}\n{block_search(next, indent_level)}\n"
+
+            case 'lmscomments_commentCommand':
+                # generic stack block
+                return f"{indent}# {input('COMMENT').strip('"')}" + next_block(False)
+
+            case 'lmscomments_commentC':
+                return f"\n{indent}# {input('COMMENT').strip('"')}\n{input_with_stack('SUBSTACK')}\n" + next_block(False)
+
+            case 'lmscomments_commentReporter':
+                # remove comment
+                return input('INPUT')
+
+            case 'lmscomments_commentBoolean':
+                # remove comment
+                return input_with_bool('INPUT')
 
 
 
