@@ -787,6 +787,41 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
 
 
 
+            # MUSIC
+
+            case 'music_playDrumForBeats':
+                return f"{indent}play_drum {input('DRUM')}, {input_num('BEATS')}" + next_block()
+
+            case 'music_menu_DRUM':
+                return field('DRUM')
+
+            case 'music_restForBeats':
+                return f"{indent}rest {input_num('BEATS')}" + next_block()
+
+            case 'music_playNoteForBeats':
+                return f"{indent}play_note {input('NOTE')}, {input_num('BEATS')}" + next_block()
+
+            case 'note':
+                # piano menu
+                return field('NOTE')
+
+            case 'music_setInstrument':
+                return f"{indent}set_instrument {input('INSTRUMENT')}" + next_block()
+
+            case 'music_menu_INSTRUMENT':
+                return field('INSTRUMENT')
+
+            case 'music_setTempo':
+                return f"{indent}set_tempo {input_num('TEMPO')}" + next_block()
+
+            case 'music_changeTempo':
+                return f"{indent}change_tempo {input_num('TEMPO')}" + next_block()
+
+            case 'music_getTempo':
+                return "tempo()"
+
+
+
             # MISC
 
             case _:
