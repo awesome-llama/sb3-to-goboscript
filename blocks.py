@@ -240,7 +240,7 @@ def recursive_block_search(target, current_block_id, shared_project_data) -> str
                 return f"costume_{fields['NUMBER_NAME'][0].lower()}()"
 
             case 'looks_backdropnumbername':
-                return f"backdrop{fields['NUMBER_NAME'][0].lower()}()"
+                return f"backdrop_{fields['NUMBER_NAME'][0].lower()}()"
 
             case 'looks_size':
                 return "size()"
