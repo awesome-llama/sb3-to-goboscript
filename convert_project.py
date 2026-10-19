@@ -109,7 +109,12 @@ def convert_project(project_path, output_directory=None):
         #if target['isStage']:
         for var in target['variables'].values():
             new_name = vnp.get_valid_name(var[0], 'var', target['name'])
-            goboscript_code.append(f"var {new_name} = {json.dumps(var[1])};")
+            if (len(var) > 2 and var[2]):
+                goboscript_code.append(f"cloud {new_name};")
+                # TODO: goboscript currently doesn't allow initializing with a value
+                # TODO: strip cloud symbol
+            else:
+                goboscript_code.append(f"var {new_name} = {json.dumps(var[1])};")
 
         if len(target['variables']) > 0: goboscript_code.append('') # extra spacing
 
